@@ -1,0 +1,214 @@
+name: Build & Deploy Next.js to AWS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  S3_BUCKET: ${{ secrets.S3_BUCKET }}
+  CLOUDFRONT_DISTRIBUTION_ID: ${{ secrets.NEXT_APP_CLOUDFRONT_ID }}
+  ASSET_PREFIX: ${{ secrets.ASSET_PREFIX }}
+  ECS_CLUSTER: ${{ secrets.ECS_CLUSTER }}
+  ECS_SERVICE: ${{ secrets.ECS_SERVICE }}
+  ALB_ID: ${{ secrets.AWS_ALB_ID }}
+  NEXT_APP_DOMAIN: ${{ secrets.NEXT_APP_DOMAIN }}
+  PREVIEW_CONTROLLER: ${{ secrets.REACT_APP_DOMAIN }}
+
+jobs:
+  infra-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      cloudfront-distribution-id: ${{ steps.terraform-outputs.outputs.cloudfront_distribution_id }}
+      alb-domain-name: ${{ steps.terraform-outputs.outputs.alb_domain_name }}
+      target-group-arn: ${{ steps.terraform-outputs.outputs.target_group_arn }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.PREVIEW_NEXT_APP_DEPLOY_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Replace placeholders in main.tf
+        run: |
+          find infrastructure -name "main.tf" -exec sed -i "s/PLACEHOLDER_S3_BUCKET/${{ secrets.INFRASTRUCTURE_S3_BUCKET_NAME }}/g" {} \;
+          find infrastructure -name "main.tf" -exec sed -i "s/PLACEHOLDER_DYNAMODB_TABLE/${{ secrets.DYNAMODB_TABLE_NAME }}/g" {} \;
+
+      - name: Terraform Init
+        working-directory: ./infrastructure
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ./infrastructure
+        run: |
+          terraform plan \
+            -var="aws_account_id=${{ secrets.AWS_ACCOUNT_ID }}" \
+            -var="next_app_cloudfront_id=${{ secrets.NEXT_APP_CLOUDFRONT_ID }}" \
+            -var="alb_id=${{ secrets.AWS_ALB_ID }}" \
+            -var="target_group_name=${{ secrets.TARGET_GROUP_NAME }}" \
+            -out=tfplan
+
+      - name: Terraform Apply
+        working-directory: ./infrastructure
+        run: terraform apply -auto-approve tfplan
+
+      - name: Get Terraform Outputs
+        id: terraform-outputs
+        working-directory: ./infrastructure
+        run: |
+          echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> $GITHUB_OUTPUT
+          echo "alb_domain_name=$(terraform output -raw alb_domain_name)" >> $GITHUB_OUTPUT
+          echo "target_group_arn=$(terraform output -raw target_group_arn)" >> $GITHUB_OUTPUT
+
+      - name: Display infrastructure info
+        run: |
+          echo "✅ Infrastructure deployment completed successfully!"
+          echo "🔄 CloudFront Distribution ID: ${{ steps.terraform-outputs.outputs.cloudfront_distribution_id }}"
+          echo "🌐 ALB Domain: ${{ steps.terraform-outputs.outputs.alb_domain_name }}"
+
+  build-deploy:
+    runs-on: ubuntu-latest
+    needs: infra-deploy
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Cache Next.js build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            ${{ github.workspace }}/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-${{ hashFiles('**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('**/package-lock.json') }}-
+
+      - name: Install dependencies
+        run: npm ci --include=dev
+
+      - name: Build Next.js application (standalone)
+        run: npm run build
+        env:
+          NODE_ENV: production
+          ASSET_PREFIX: ${{ env.ASSET_PREFIX }}
+          NEXT_APP_DOMAIN: ${{ env.NEXT_APP_DOMAIN }}
+          PREVIEW_CONTROLLER: ${{ env.PREVIEW_CONTROLLER }}
+
+      - name: Create static export structure
+        run: |
+          mkdir -p out/_next
+          cp -r .next/static out/_next/static
+
+      - name: Configure AWS credentials for S3
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.S3_UPLOAD_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload static assets to S3
+        run: |
+          aws s3 sync ./out s3://${{ env.S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ needs.infra-deploy.outputs.cloudfront-distribution-id }} \
+            --paths "/*"
+
+      - name: Configure AWS credentials for ECR
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.ECR_PUSH_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+          tags: |
+            type=raw,value=next-app-latest
+            type=raw,value=next-app-${{ github.sha }}
+            type=raw,value=next-app-${{ github.run_number }}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            ASSET_PREFIX=${{ env.ASSET_PREFIX }}
+            NODE_ENV=production
+            NEXT_APP_DOMAIN=${{ env.NEXT_APP_DOMAIN }}
+            PREVIEW_CONTROLLER=${{ env.PREVIEW_CONTROLLER }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Configure AWS credentials for ECS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.ECS_DEPLOY_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment
+
+  release:
+    runs-on: ubuntu-latest
+    needs: build-deploy
+    if: success()
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          fetch-tags: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install semantic-release dependencies
+        run: |
+          npm install -g semantic-release @semantic-release/commit-analyzer @semantic-release/release-notes-generator @semantic-release/changelog @semantic-release/git @semantic-release/github
+
+      - name: Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release

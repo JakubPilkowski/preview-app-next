@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+  next-app-local:
+    build:
+      context: .
+      dockerfile: Dockerfile.local
+      args:
+        ASSET_PREFIX: ${ASSET_PREFIX:-}
+        NODE_ENV: production
+    ports:
+      - '4201:80'
+    environment:
+      - NODE_ENV=production
+      - ASSET_PREFIX=${ASSET_PREFIX:-}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
