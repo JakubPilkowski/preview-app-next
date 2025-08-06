@@ -10,6 +10,23 @@ const nextConfig = {
   // Use this to set Nx-specific options
   // See: https://nx.dev/recipes/next/next-config-setup
   nx: {},
+  // Configure the port
+  transpilePackages: ['@preview-workspace/preview-lib'],
+  // Set the port for development
+  env: {
+    PORT: '4201',
+  },
+  images: {
+    remotePatterns: [
+      {
+        hostname: 'localhost',
+        port: '4200',
+      },
+      {
+        hostname: 'picsum.photos',
+      },
+    ],
+  },
 };
 
 const plugins = [

@@ -2,12 +2,23 @@
   "name": "@next-app/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "dev": "nx serve next-app --port=4201",
+    "build": "nx build next-app",
+    "start": "nx serve next-app --port=4201",
+    "lint": "nx lint next-app"
+  },
   "private": true,
   "dependencies": {
+    "@floating-ui/react-dom": "^2.1.5",
+    "@preview-workspace/preview-lib": "^2.0.6",
+    "embla-carousel-react": "^8.6.0",
+    "immer": "^10.1.1",
     "next": "~15.2.4",
     "react": "19.0.0",
-    "react-dom": "19.0.0"
+    "react-dom": "19.0.0",
+    "sortablejs": "^1.15.6",
+    "use-undo": "^1.1.1"
   },
   "devDependencies": {
     "@eslint/compat": "^1.1.1",
@@ -25,6 +36,7 @@
     "@swc/helpers": "~0.5.11",
     "@types/react": "19.0.0",
     "@types/react-dom": "19.0.0",
+    "@types/sortablejs": "^1.15.8",
     "eslint": "^9.8.0",
     "eslint-config-next": "^15.2.4",
     "eslint-config-prettier": "^10.0.0",
