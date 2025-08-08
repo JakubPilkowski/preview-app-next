@@ -10,6 +10,7 @@ WORKDIR /app
 # Install dependencies based on the preferred package manager
 COPY .npmrc package.json package-lock.json* ./
 RUN npm ci --only=production
+RUN npm install -g nx
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -17,9 +18,13 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Accept build argument for asset prefix
+# Accept build arguments
 ARG ASSET_PREFIX
+ARG NODE_ENV=production
+
+# Set build-time environment variables
 ENV ASSET_PREFIX=$ASSET_PREFIX
+ENV NODE_ENV=$NODE_ENV
 
 # Build the application
 RUN npm run build
@@ -28,8 +33,6 @@ RUN npm run build
 FROM base AS runner
 WORKDIR /app
 
-ENV NODE_ENV production
-ENV ASSET_PREFIX https://your-cloudfront-domain.cloudfront.net
 # Uncomment the following line in case you want to disable telemetry during runtime.
 # ENV NEXT_TELEMETRY_DISABLED 1
 
@@ -51,9 +54,8 @@ USER nextjs
 
 EXPOSE 80
 
+# Runtime environment variables
 ENV PORT 80
-# set hostname to localhost
-ENV HOSTNAME "0.0.0.0"
 
 # server.js is created by next build from the standalone output
 # https://nextjs.org/docs/pages/api-reference/next-config-js/output
