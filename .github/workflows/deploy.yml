@@ -30,10 +30,13 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
+      - name: Setup nx
+        uses: nrwl/nx-setup@v4
+        with:
+          version: latest
+
       - name: Install dependencies
-        run: |
-          npm ci
-          npm install -g nx
+        run: npm ci
 
       - name: Build Next.js application for static export
         run: |
