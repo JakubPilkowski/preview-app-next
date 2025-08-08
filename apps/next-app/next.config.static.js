@@ -1,5 +1,6 @@
 //@ts-check
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const { composePlugins, withNx } = require('@nx/next');
 
 /**
@@ -17,10 +18,15 @@ const nextConfig = {
   },
   // Asset prefix for CloudFront + S3
   assetPrefix:
-    process.env.NODE_ENV === 'production' ? process.env.ASSET_PREFIX : '',
-  // Output standalone for Docker deployment
-  output: 'standalone',
+    process.env.NODE_ENV === 'production'
+      ? process.env.ASSET_PREFIX ||
+        'https://your-cloudfront-domain.cloudfront.net'
+      : '',
+  // Output static for S3 deployment
+  output: 'export',
+  trailingSlash: true,
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         hostname: 'localhost',

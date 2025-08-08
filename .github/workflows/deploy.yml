@@ -1,0 +1,102 @@
+name: Build & Deploy Next.js to AWS
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: eu-north-1
+  ECR_REPOSITORY: kalabanga/preview
+  S3_BUCKET: preview-next-app-bucket
+  CLOUDFRONT_DISTRIBUTION_ID: E2VYQ6H5O2WIBI
+  ASSET_PREFIX: http://d17nmghnqx8jao.cloudfront.net
+  ECS_CLUSTER: preview_next_app
+  ECS_SERVICE: next-app-service-aatrz4uu
+  ALB_DOMAIN: preview-next-app-205031563.eu-north-1.elb.amazonaws.com
+
+jobs:
+  build-and-upload-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js application for static export
+        run: |
+          cp apps/next-app/next.config.static.js apps/next-app/next.config.js
+          npm run build
+        env:
+          NODE_ENV: production
+          ASSET_PREFIX: ${{ env.ASSET_PREFIX }}
+
+      - name: Configure AWS credentials for S3
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.S3_UPLOAD_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload static assets to S3
+        run: |
+          aws s3 sync ./apps/next-app/out s3://${{ env.S3_BUCKET }} --delete
+
+      - name: Invalidate CloudFront cache
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/_next/static/*" "/public/*"
+
+  build-and-push-docker:
+    needs: build-and-upload-assets
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Configure AWS credentials for ECR
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.ECR_PUSH_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+      - name: Build Docker image
+        run: |
+          docker build --build-arg ASSET_PREFIX=${{ env.ASSET_PREFIX }} -t ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} .
+          docker tag ${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+      - name: Push Docker image to ECR
+        run: |
+          docker push ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+  deploy-to-ecs:
+    needs: build-and-push-docker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials for ECS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.ECS_DEPLOY_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Deploy to ECS Fargate
+        run: |
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment

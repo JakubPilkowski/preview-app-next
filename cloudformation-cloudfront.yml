@@ -1,0 +1,230 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFront distribution for Next.js app"
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for static assets
+    Default: your-nextjs-static-assets
+
+  ALBDomainName:
+    Type: String
+    Description: Application Load Balancer domain name
+    Default: your-alb-name.eu-north-1.elb.amazonaws.com
+
+Resources:
+  # CloudFront Distribution
+  CloudFrontDistribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Comment: "Next.js app distribution with S3 and ALB origins"
+        Enabled: true
+        DefaultRootObject: ""
+
+        # Origins
+        Origins:
+          # S3 Origin for static assets
+          - Id: S3-StaticAssets
+            DomainName: !Sub "${S3BucketName}.s3.eu-north-1.amazonaws.com"
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOAI}"
+
+          # ALB Origin for dynamic content
+          - Id: ALB-DynamicContent
+            DomainName: !Ref ALBDomainName
+            CustomOriginConfig:
+              HTTPPort: 80
+              HTTPSPort: 443
+              OriginProtocolPolicy: http-only
+              OriginSSLProtocols:
+                - TLSv1.2
+
+        # Default Cache Behavior (ALB)
+        DefaultCacheBehavior:
+          TargetOriginId: ALB-DynamicContent
+          ViewerProtocolPolicy: redirect-to-https
+          AllowedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+            - PUT
+            - POST
+            - PATCH
+            - DELETE
+          CachedMethods:
+            - GET
+            - HEAD
+            - OPTIONS
+          CachePolicyId: 4135ea2d-6df8-44a3-9df3-4b5a84be39ad # CachingDisabled
+          OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+          Compress: true
+          FunctionAssociations: []
+
+        # Cache Behaviors for static assets
+        CacheBehaviors:
+          # Next.js static files
+          - PathPattern: "/_next/static/*"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: true
+
+          # Public assets
+          - PathPattern: "/public/*"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: true
+
+          # Static file extensions
+          - PathPattern: "*.js"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: true
+
+          - PathPattern: "*.css"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: true
+
+          - PathPattern: "*.png"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: false
+
+          - PathPattern: "*.jpg"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: false
+
+          - PathPattern: "*.svg"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: true
+
+          - PathPattern: "*.ico"
+            TargetOriginId: S3-StaticAssets
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachedMethods:
+              - GET
+              - HEAD
+              - OPTIONS
+            CachePolicyId: 658327ea-f89d-4fab-a63d-7e88639e58f6 # CachingOptimized
+            OriginRequestPolicyId: 88a5eaf4-2fd4-4709-b370-b4c650ea3fcf # CORS-S3Origin
+            Compress: false
+
+        # Viewer Certificate (if you have a custom domain)
+        ViewerCertificate:
+          CloudFrontDefaultCertificate: true
+          # Uncomment below for custom domain
+          # AcmCertificateArn: !Ref SSLCertificate
+          # SslSupportMethod: sni-only
+          # MinimumProtocolVersion: TLSv1.2_2021
+
+  # CloudFront Origin Access Identity for S3
+  CloudFrontOAI:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: "OAI for S3 static assets"
+
+  # S3 Bucket Policy for CloudFront access
+  S3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3BucketName
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "CloudFrontAccess"
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOAI}"
+            Action: s3:GetObject
+            Resource: !Sub "${S3BucketName}/*"
+
+Outputs:
+  CloudFrontDistributionId:
+    Description: CloudFront Distribution ID
+    Value: !Ref CloudFrontDistribution
+    Export:
+      Name: !Sub "${AWS::StackName}-DistributionId"
+
+  CloudFrontDomainName:
+    Description: CloudFront Distribution Domain Name
+    Value: !GetAtt CloudFrontDistribution.DomainName
+    Export:
+      Name: !Sub "${AWS::StackName}-DomainName"
