@@ -97,11 +97,6 @@ jobs:
           name: next-build
           path: .
 
-      - name: Allow .next in Docker build
-        run: |
-          # Temporarily remove .next from .dockerignore for this build
-          sed -i '/^\.next$/d' .dockerignore
-
       - name: Configure AWS credentials for ECR
         uses: aws-actions/configure-aws-credentials@v4
         with:
