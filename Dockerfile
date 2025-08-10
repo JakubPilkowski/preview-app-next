@@ -15,6 +15,15 @@ RUN --mount=type=cache,target=/root/.npm \
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
+
+# Accept build arguments
+ARG ASSET_PREFIX
+ARG NODE_ENV
+
+# Set environment variables for the build
+ENV ASSET_PREFIX=$ASSET_PREFIX
+ENV NODE_ENV=$NODE_ENV
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
