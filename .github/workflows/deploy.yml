@@ -97,11 +97,14 @@ jobs:
           name: next-build
           path: .
 
-      - name: Allow .next in Docker build
+      - name: Debug - Check downloaded artifacts
         run: |
-          # Temporarily remove .next from .dockerignore for this build
-          # since .next is downloaded as an artifact from the previous job
-          sed -i '/^\.next$/d' .dockerignore
+          echo "=== Checking downloaded artifacts ==="
+          ls -la
+          echo "=== Checking if .next exists ==="
+          ls -la .next/ || echo ".next directory not found"
+          echo "=== Checking .next contents ==="
+          ls -la .next/ 2>/dev/null || echo "Cannot list .next contents"
 
       - name: Configure AWS credentials for ECR
         uses: aws-actions/configure-aws-credentials@v4
