@@ -12,7 +12,7 @@ COPY .npmrc package.json package-lock.json* ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci --include=dev
 
-# Rebuild the source code only when needed
+# Use pre-built artifacts from the previous job
 FROM base AS builder
 WORKDIR /app
 
@@ -24,16 +24,12 @@ ARG NODE_ENV
 ENV ASSET_PREFIX=$ASSET_PREFIX
 ENV NODE_ENV=$NODE_ENV
 
+# Copy pre-built artifacts (same asset IDs as S3)
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-
-# Next.js collects completely anonymous telemetry data about general usage.
-# Learn more here: https://nextjs.org/telemetry
-# Uncomment the following line in case you want to disable telemetry during the build.
-ENV NEXT_TELEMETRY_DISABLED=1
-
-RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+COPY .next ./.next
+COPY public ./public
+COPY next.config.js ./
+COPY ecosystem.config.js ./
 
 # Production image, copy all the files and run next
 FROM base AS runner

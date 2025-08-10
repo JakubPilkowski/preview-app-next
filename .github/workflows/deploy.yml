@@ -43,11 +43,16 @@ jobs:
       - name: Install dependencies
         run: npm ci --include=dev
 
-      - name: Build Next.js application for static export
-        run: npm run export
+      - name: Build Next.js application (standalone)
+        run: npm run build
         env:
           NODE_ENV: production
           ASSET_PREFIX: ${{ env.ASSET_PREFIX }}
+
+      - name: Create static export structure
+        run: |
+          mkdir -p out/_next
+          cp -r .next/static out/_next/static
 
       - name: Configure AWS credentials for S3
         uses: aws-actions/configure-aws-credentials@v4
@@ -65,6 +70,19 @@ jobs:
             --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
+      - name: Upload build artifacts for Docker
+        uses: actions/upload-artifact@v3
+        with:
+          name: next-build
+          path: |
+            .next
+            public
+            package.json
+            package-lock.json
+            next.config.js
+            ecosystem.config.js
+          retention-days: 1
+
   build-and-push-docker:
     needs: build-and-upload-assets
     runs-on: ubuntu-latest
@@ -72,6 +90,17 @@ jobs:
       image-tag: ${{ steps.meta.outputs.tags }}
     steps:
       - uses: actions/checkout@v3
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: next-build
+          path: .
+
+      - name: Allow .next in Docker build
+        run: |
+          # Temporarily remove .next from .dockerignore for this build
+          sed -i '/^\.next$/d' .dockerignore
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
