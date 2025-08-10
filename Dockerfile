@@ -9,7 +9,8 @@ WORKDIR /app
 
 # Install dependencies based on the preferred package manager
 COPY .npmrc package.json package-lock.json* ./
-RUN npm ci --include=dev
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --include=dev
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -22,7 +23,8 @@ COPY . .
 # Uncomment the following line in case you want to disable telemetry during the build.
 ENV NEXT_TELEMETRY_DISABLED=1
 
-RUN npm run build
+RUN --mount=type=cache,target=/app/.next/cache \
+    npm run build
 
 # Production image, copy all the files and run next
 FROM base AS runner
