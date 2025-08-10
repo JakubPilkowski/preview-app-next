@@ -19,7 +19,7 @@ env:
   ALB_DOMAIN: preview-next-app-205031563.eu-north-1.elb.amazonaws.com
 
 jobs:
-  build-and-upload-assets:
+  build-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -70,42 +70,6 @@ jobs:
             --distribution-id ${{ env.CLOUDFRONT_DISTRIBUTION_ID }} \
             --paths "/*"
 
-      - name: Upload build artifacts for Docker
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-build
-          path: |
-            .next
-            public
-            package.json
-            package-lock.json
-            next.config.js
-            ecosystem.config.js
-          retention-days: 1
-
-  build-and-push-docker:
-    needs: build-and-upload-assets
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.meta.outputs.tags }}
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: .
-
-      - name: Debug - Check downloaded artifacts
-        run: |
-          echo "=== Checking downloaded artifacts ==="
-          ls -la
-          echo "=== Checking if .next exists ==="
-          ls -la .next/ || echo ".next directory not found"
-          echo "=== Checking .next contents ==="
-          ls -la .next/ 2>/dev/null || echo "Cannot list .next contents"
-
       - name: Configure AWS credentials for ECR
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -142,10 +106,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy-to-ecs:
-    needs: build-and-push-docker
-    runs-on: ubuntu-latest
-    steps:
       - name: Configure AWS credentials for ECS
         uses: aws-actions/configure-aws-credentials@v4
         with:
