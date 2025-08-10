@@ -35,26 +35,31 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Install PM2 globally
+# Install PM2 globally and libcap2-bin for setcap
 RUN npm install -g pm2
+RUN apk add --no-cache libcap2-bin
 
 # Create logs directory
-RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs
+RUN mkdir -p /app/logs
 
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
 RUN mkdir .next
-RUN chown nextjs:nodejs .next
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=root:root /app/.next/standalone ./
+COPY --from=builder --chown=root:root /app/.next/static ./.next/static
 
 # Copy PM2 configuration
-COPY --chown=nextjs:nodejs ecosystem.config.js ./
+COPY --chown=root:root ecosystem.config.js ./
 
+# Give Node.js permission to bind to port 80
+RUN setcap 'cap_net_bind_service=+ep' /usr/local/bin/node
+
+# Set ownership and switch to nextjs user
+RUN chown -R nextjs:nodejs /app
 USER nextjs
 
 EXPOSE 80
