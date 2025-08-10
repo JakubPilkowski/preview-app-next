@@ -17,7 +17,7 @@ const nextConfig = {
         'https://your-cloudfront-domain.cloudfront.net'
       : '',
   // Output static for S3 deployment
-  output: 'export',
+  output: 'standalone',
   trailingSlash: true,
   images: {
     unoptimized: true,

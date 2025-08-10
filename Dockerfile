@@ -8,8 +8,8 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
 # Install dependencies based on the preferred package manager
-COPY package.json package-lock.json* ./
-RUN npm ci --only=production
+COPY .npmrc package.json package-lock.json* ./
+RUN npm ci --include=dev
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -35,6 +35,12 @@ ENV NODE_ENV production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Install PM2 globally
+RUN npm install -g pm2
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown nextjs:nodejs /app/logs
+
 COPY --from=builder /app/public ./public
 
 # Set the correct permission for prerender cache
@@ -46,6 +52,9 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy PM2 configuration
+COPY --chown=nextjs:nodejs ecosystem.config.js ./
+
 USER nextjs
 
 EXPOSE 80
@@ -54,6 +63,5 @@ ENV PORT 80
 # set hostname to localhost
 ENV HOSTNAME "0.0.0.0"
 
-# server.js is created by next build from the standalone output
-# https://nextjs.org/docs/pages/api-reference/next-config-js/output
-CMD ["node", "server.js"] 
+# Start with PM2
+CMD ["pm2-runtime", "start", "ecosystem.config.js", "--env", "production"] 
