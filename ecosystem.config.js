@@ -22,7 +22,7 @@ module.exports = {
       // Restart settings
       autorestart: true,
       watch: false,
-      max_restarts: 10,
+      max_restarts: 2,
       min_uptime: '10s',
     },
   ],
