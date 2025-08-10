@@ -13,7 +13,7 @@ env:
   ECR_REPOSITORY: kalabanga/preview
   S3_BUCKET: preview-next-app-bucket
   CLOUDFRONT_DISTRIBUTION_ID: E2VYQ6H5O2WIBI
-  ASSET_PREFIX: http://d17nmghnqx8jao.cloudfront.net
+  ASSET_PREFIX: http://d3p25ijdc2dv33.cloudfront.net
   ECS_CLUSTER: preview_next_app
   ECS_SERVICE: next-app-service-aatrz4uu
   ALB_DOMAIN: preview-next-app-205031563.eu-north-1.elb.amazonaws.com

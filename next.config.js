@@ -10,10 +10,7 @@ const nextConfig = {
   },
   // Asset prefix for CloudFront + S3
   assetPrefix:
-    process.env.NODE_ENV === 'production'
-      ? process.env.ASSET_PREFIX ||
-        'https://your-cloudfront-domain.cloudfront.net'
-      : '',
+    process.env.NODE_ENV === 'production' ? process.env.ASSET_PREFIX : '',
   // Output static for S3 deployment
   output: 'standalone',
   trailingSlash: true,
