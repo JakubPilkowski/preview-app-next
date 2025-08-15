@@ -81,7 +81,10 @@ export const useMessageChannelBroker = (
       setState('connecting');
 
       // Send ready signal to parent
-      window.parent.postMessage({ type: MESSAGE_TYPES.NEXT_JS_READY }, '*');
+      window.parent.postMessage(
+        { type: MESSAGE_TYPES.NEXT_JS_READY },
+        process.env.PREVIEW_CONTROLLER || 'http://localhost:4200'
+      );
 
       // Listen for the port transfer from parent (React app)
       const handleMessage = (event: MessageEvent) => {

@@ -8,6 +8,7 @@ const nextConfig = {
   env: {
     PORT: '4201',
     NEXT_APP_DOMAIN: process.env.NEXT_APP_DOMAIN || '',
+    PREVIEW_CONTROLLER: process.env.PREVIEW_CONTROLLER || '',
   },
   // Asset prefix for CloudFront + S3
   assetPrefix:
