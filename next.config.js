@@ -21,7 +21,6 @@ const nextConfig = {
       ...(process.env.NODE_ENV !== 'production'
         ? [
             {
-              protocol: 'http',
               hostname: 'localhost',
               port: '4200',
             },
@@ -34,8 +33,7 @@ const nextConfig = {
       process.env.PREVIEW_CONTROLLER
         ? [
             {
-              protocol: 'http',
-              hostname: new URL(process.env.PREVIEW_CONTROLLER).hostname,
+              hostname: process.env.PREVIEW_CONTROLLER,
             },
           ]
         : []),
