@@ -1,7 +1,7 @@
 import React, { forwardRef } from 'react';
-import Image from 'next/image';
 import type { Section1 as Section1Type } from '@preview-workspace/preview-lib';
 import { useElementPreviewDraggable } from '../../hooks/utils/use-element-preview-draggable';
+import { BlobImage } from '../../components/blob-image';
 
 interface Section1Props {
   section1: Section1Type;
@@ -35,7 +35,7 @@ export const Section1 = forwardRef<HTMLDivElement, Section1Props>(
         }}
       >
         {section1.image && (
-          <Image
+          <BlobImage
             src={section1.image}
             alt={section1.title}
             fill
