@@ -14,7 +14,7 @@ const nextConfig = {
     process.env.NODE_ENV === 'production' ? process.env.ASSET_PREFIX : '',
   // Output static for S3 deployment
   output: 'standalone',
-  trailingSlash: true,
+  trailingSlash: false,
   images: {
     unoptimized: false,
     remotePatterns: [
