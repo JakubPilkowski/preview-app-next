@@ -80,6 +80,11 @@ export const useMessageChannelBroker = (
       setError(null); // Clear any previous errors
       setState('connecting');
 
+      console.log(
+        '🚀 ~ onConnect ~ process.env.PREVIEW_CONTROLLER:',
+        process.env.PREVIEW_CONTROLLER
+      );
+
       // Send ready signal to parent
       window.parent.postMessage(
         { type: MESSAGE_TYPES.NEXT_JS_READY },
