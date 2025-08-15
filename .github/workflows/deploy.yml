@@ -17,6 +17,8 @@ env:
   ECS_CLUSTER: preview_next_app
   ECS_SERVICE: next-app-service-aatrz4uu
   ALB_DOMAIN: preview-next-app-205031563.eu-north-1.elb.amazonaws.com
+  NEXT_APP_DOMAIN: ${{ secrets.NEXT_APP_DOMAIN }}
+  PREVIEW_CONTROLLER: ${{ secrets.REACT_APP_DOMAIN }}
 
 jobs:
   build-deploy:
@@ -48,6 +50,8 @@ jobs:
         env:
           NODE_ENV: production
           ASSET_PREFIX: ${{ env.ASSET_PREFIX }}
+          NEXT_APP_DOMAIN: ${{ env.NEXT_APP_DOMAIN }}
+          PREVIEW_CONTROLLER: ${{ env.PREVIEW_CONTROLLER }}
 
       - name: Create static export structure
         run: |
@@ -103,6 +107,8 @@ jobs:
           build-args: |
             ASSET_PREFIX=${{ env.ASSET_PREFIX }}
             NODE_ENV=production
+            NEXT_APP_DOMAIN=${{ env.NEXT_APP_DOMAIN }}
+            PREVIEW_CONTROLLER=${{ env.PREVIEW_CONTROLLER }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -7,6 +7,7 @@ const nextConfig = {
   // Set the port for development
   env: {
     PORT: '4201',
+    NEXT_APP_DOMAIN: process.env.NEXT_APP_DOMAIN || '',
   },
   // Asset prefix for CloudFront + S3
   assetPrefix:
@@ -15,15 +16,29 @@ const nextConfig = {
   output: 'standalone',
   trailingSlash: true,
   images: {
-    unoptimized: true,
+    unoptimized: false,
     remotePatterns: [
-      {
-        hostname: 'localhost',
-        port: '4200',
-      },
+      ...(process.env.NODE_ENV !== 'production'
+        ? [
+            {
+              hostname: 'localhost',
+              port: '4200',
+            },
+          ]
+        : []),
       {
         hostname: 'picsum.photos',
       },
+      ...(process.env.NODE_ENV === 'production' &&
+      process.env.PREVIEW_CONTROLLER
+        ? [
+            {
+              protocol: 'https',
+              hostname: new URL(process.env.PREVIEW_CONTROLLER).hostname,
+              port: new URL(process.env.PREVIEW_CONTROLLER).port || '',
+            },
+          ]
+        : []),
     ],
   },
 };

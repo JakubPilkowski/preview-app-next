@@ -7,6 +7,7 @@ const nextConfig = {
   // Set the port for development
   env: {
     PORT: '4201',
+    NEXT_APP_DOMAIN: process.env.NEXT_APP_DOMAIN || '',
   },
   // Output static for S3 deployment
   output: 'export',

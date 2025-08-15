@@ -43,8 +43,9 @@ export function useDragDrop({
           draggable: `[${ATTRIBUTE_DRAGGABLE}="true"]`, // Only draggable elements
           bubbleScroll: true,
           scroll: true,
-          scrollSensitivity: 100, // px, how near the mouse must be to an edge to start scrolling
+          scrollSensitivity: 200, // px, how near the mouse must be to an edge to start scrolling
           scrollSpeed: 200, // px per frame
+          forceAutoScrollFallback: true,
           onEnd: (evt) => {
             const itemId = evt.item.getAttribute(ATTRIBUTE_ID);
             const newIndex = evt.newIndex;
@@ -78,7 +79,8 @@ export function useDragDrop({
           bubbleScroll: true,
           scroll: true,
           scrollSensitivity: 100, // px, how near the mouse must be to an edge to start scrolling
-          scrollSpeed: 200, // px per frame
+          scrollSpeed: 50, // px per frame
+          forceAutoScrollFallback: true,
           onEnd: (evt) => {
             const itemId = evt.item.getAttribute(ATTRIBUTE_ID);
             const newIndex = evt.newIndex;

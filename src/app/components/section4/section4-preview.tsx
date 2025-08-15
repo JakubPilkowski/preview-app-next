@@ -94,6 +94,7 @@ export const Section4Preview = forwardRef<HTMLDivElement, Section4PreviewProps>(
 
     return (
       <Section4Container ref={ref} draggableAttributes={draggableAttributes}>
+        <h3>{section4.title}</h3>
         <div
           style={{
             width: '100%',
@@ -150,10 +151,10 @@ export const Section4Preview = forwardRef<HTMLDivElement, Section4PreviewProps>(
           <Section4ScrollContainer
             ref={containerRef}
             droppableAttributes={droppableAttributes}
-            style={{
-              scrollSnapType: 'x mandatory',
-              scrollBehavior: 'smooth',
-            }}
+            // style={{
+            //   scrollSnapType: 'x mandatory',
+            //   scrollBehavior: 'smooth',
+            // }}
           >
             {section4.children.map((child) => (
               <Section4Child

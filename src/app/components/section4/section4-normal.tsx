@@ -76,6 +76,7 @@ export const Section4Normal = forwardRef<HTMLDivElement, Section4NormalProps>(
 
     return (
       <Section4Container ref={ref} draggableAttributes={draggableAttributes}>
+        <h3>{section4.title}</h3>
         <div
           style={{
             width: '100%',
