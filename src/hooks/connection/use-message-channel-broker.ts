@@ -85,10 +85,24 @@ export const useMessageChannelBroker = (
         process.env.PREVIEW_CONTROLLER
       );
 
+      // Determine the origin with proper protocol
+      const getOrigin = () => {
+        const controller = process.env.PREVIEW_CONTROLLER;
+        if (!controller) return 'http://localhost:4200';
+        
+        // Add protocol if missing
+        if (controller.startsWith('http://') || controller.startsWith('https://')) {
+          return controller;
+        }
+        
+        // Default to http for domains without protocol
+        return `http://${controller}`;
+      };
+
       // Send ready signal to parent
       window.parent.postMessage(
         { type: MESSAGE_TYPES.NEXT_JS_READY },
-        process.env.PREVIEW_CONTROLLER || 'http://localhost:4200'
+        getOrigin()
       );
 
       // Listen for the port transfer from parent (React app)
