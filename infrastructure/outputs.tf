@@ -18,7 +18,3 @@ output "target_group_arn" {
   value       = data.aws_lb_target_group.next_app.arn
 }
 
-output "iam_role_arn" {
-  description = "IAM Role ARN"
-  value       = aws_iam_role.preview_next_app_deploy.arn
-}
